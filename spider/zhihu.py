@@ -266,6 +266,11 @@ class User:
             if user_id != None:
                 self.user_id = user_id
 
+    def username(self):
+        if self.user_url.split("/")[-1]:
+            return self.user_url.split("/")[-1]
+        return self.user_url.split("/")[-2]
+
     def parser(self):
         r = requests.get(self.user_url)
         soup = BeautifulSoup(r.content)
@@ -460,7 +465,7 @@ class User:
 
     def get_followers(self):
         if self.user_url == None:
-            print ("I'm anonymous user.")
+            print("I'm anonymous user.")
             return
             yield
         else:
@@ -629,6 +634,26 @@ class User:
 
 
 class UserDetail(User):
+    detail_soup = None
+    topic_soup = None
+
+    def detail_url(self):
+        return "https://www.zhihu.com/people/%s/about" % self.username()
+
+    def topic_url(self):
+        return "https://www.zhihu.com/people/%s/topics" % self.username()
+
+
+    def detail_parser(self):
+        r = requests.get(self.detail_url())
+        detail_soup = BeautifulSoup(r.content)
+        self.detail_soup = detail_soup
+
+    def topic_parser(self):
+        r = requests.get(self.topic_url())
+        topic_soup = BeautifulSoup(r.content)
+        self.topic_soup = topic_soup
+
     def base_profile_num(self, i=0):
         """
             个人成就--获得赞同数量
@@ -637,10 +662,10 @@ class UserDetail(User):
             print ("I'm anonymous user.")
             return 0
         else:
-            if self.soup == None:
-                self.parser()
-            soup = self.soup
-            num = int(soup.find("div", class_="zm-profile-module zm-profile-details-reputation") \
+            if self.detail_soup == None:
+                self.detail_parser()
+            detail_soup = self.detail_soup
+            num = int(detail_soup.find("div", class_="zm-profile-module zm-profile-details-reputation") \
                                 .find_all("strong")[i].string)
             return num
 
@@ -684,9 +709,9 @@ class UserDetail(User):
             yield
         else:
             if self.soup == None:
-                self.parser()
-            soup = self.soup
-            carrer_box = soup.find_all('div', class_="zm-profile-module zg-clear")[0].find_all("strong")
+                self.detail_parser()
+            detail_soup = self.detail_soup
+            carrer_box = detail_soup.find_all('div', class_="zm-profile-module zg-clear")[0].find_all("strong")
             tmp = []
             for i in range(len(carrer_box)):
                 if carrer_box[i].find('a'):
@@ -708,10 +733,10 @@ class UserDetail(User):
             return 0
             yield
         else:
-            if self.soup == None:
-                self.parser()
-            soup = self.soup
-            carrer_box = soup.find_all('div', class_="zm-profile-module zg-clear")[1].find_all("strong")
+            if self.detail_soup == None:
+                self.detail_parser()
+            detail_soup = self.detail_soup
+            carrer_box = detail_soup.find_all('div', class_="zm-profile-module zg-clear")[1].find_all("strong")
             for i in range(len(carrer_box)):
                 if carrer_box[i].find('a'):
                     string = carrer_box[i].find('a').string
@@ -729,10 +754,10 @@ class UserDetail(User):
             return 0
             yield
         else:
-            if self.soup == None:
-                self.parser()
-            soup = self.soup
-            carrer_box = soup.find_all('div', class_="zm-profile-module zg-clear")[2].find_all("strong")
+            if self.detail_soup == None:
+                self.detail_parser()
+            detail_soup = self.detail_soup
+            carrer_box = detail_soup.find_all('div', class_="zm-profile-module zg-clear")[2].find_all("strong")
             tmp = []
             for i in range(len(carrer_box)):
                 if carrer_box[i].find('a'):
@@ -744,6 +769,49 @@ class UserDetail(User):
                     if len(tmp) == 2:
                         yield tmp
                         tmp = []
+
+    def get_topics_num(self):
+        if self.detail_soup == None:
+            self.detail_parser()
+        detail_soup = self.detail_soup
+        count = detail_soup.find_all('div', class_="zm-profile-side-section-title")[1].find('a').string.split()[0]
+        return int(count)
+
+    def get_topics(self):
+        if self.topic_soup == None:
+            self.topic_parser()
+        topic_url = self.topic_url()
+        topic_soup = self.topic_soup
+        topics_num = self.get_topics_num()
+        for i in range((topics_num - 1) // 20 + 1):
+            if i == 0:
+                user_url_list = topic_soup.find_all("div", class_="zm-profile-section-item zg-clear")
+                for j in range(min(topics_num, 20)):
+                    atag = user_url_list[j].find_all('a', href=re.compile("\/topic\/\d+"))[-2]
+                    yield (atag.string, atag['href'])
+            else:
+                _xsrf = topic_soup.find("input", attrs={'name': '_xsrf'})["value"]
+                offset = i * 20
+                # params = json.dumps({"offset": offset, "order_by": "created", })
+                data = {
+                    '_xsrf': _xsrf,
+                    "offset": offset,
+                    'start': 0,
+                }
+                header = {
+                    'User-Agent': "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:34.0) Gecko/20100101 Firefox/34.0",
+                    'Host': "www.zhihu.com",
+                    'Referer': topic_url
+                }
+                r_post = requests.post(topic_url, data=data, headers=header)
+                follower_soup = BeautifulSoup(r_post.json()['msg'][1])
+                userlink = follower_soup.find_all('div', class_="zm-profile-section-main")
+                # print(userlink[0].find('a', href=re.compile("\/topic\/\d+")).string)
+                for j in range(min(topics_num - i * 20, 20)):
+                    # follower_soup = BeautifulSoup(follower_list[j])
+                    atag = userlink[j].find('a', href=re.compile("\/topic\/\d+"))
+                    yield (atag.string, atag['href'])
+
 
 class Answer:
     answer_url = None
