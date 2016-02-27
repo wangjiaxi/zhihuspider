@@ -51,7 +51,7 @@ class Question:
             if self.soup == None:
                 self.parser()
             soup = self.soup
-            title = soup.find("h2", class_="zm-item-title").string.encode("utf-8").replace("\n", "")
+            title = soup.find("h2", class_="zm-item-title").string.replace("\n", "")
             self.title = title
             if platform.system() == 'Windows':
                 title = title.decode('utf-8').encode('gbk')
@@ -63,7 +63,7 @@ class Question:
         if self.soup == None:
             self.parser()
         soup = self.soup
-        detail = soup.find("div", id="zh-question-detail").div.get_text().encode("utf-8")
+        detail = soup.find("div", id="zh-question-detail").div.get_text()
         if platform.system() == 'Windows':
             detail = detail.decode('utf-8').encode('gbk')
             return detail
@@ -93,7 +93,7 @@ class Question:
         topic_list = soup.find_all("a", class_="zm-item-tag")
         topics = []
         for i in topic_list:
-            topic = i.contents[0].encode("utf-8").replace("\n", "")
+            topic = i.contents[0].replace("\n", "")
             if platform.system() == 'Windows':
                 topic = topic.decode('utf-8').encode('gbk')
             topics.append(topic)
@@ -276,7 +276,7 @@ class User:
         soup = BeautifulSoup(r.content)
         self.soup = soup
 
-    def get_user_id(self):
+    def nickname(self):
         if self.user_url == None:
             # print "I'm anonymous user."
             if platform.system() == 'Windows':
@@ -436,7 +436,7 @@ class User:
                     if i == 0:
                         user_url_list = soup.find_all("h2", class_="zm-list-content-title")
                         for j in range(min(followees_num, 20)):
-                            yield User(user_url_list[j].a["href"], user_url_list[j].a.string.encode("utf-8"))
+                            yield UserDetail(user_url_list[j].a["href"], user_url_list[j].a.string.encode("utf-8"))
                     else:
                         post_url = "http://www.zhihu.com/node/ProfileFolloweesListV2"
                         _xsrf = soup.find("input", attrs={'name': '_xsrf'})["value"]
@@ -460,7 +460,7 @@ class User:
                         for j in range(min(followees_num - i * 20, 20)):
                             followee_soup = BeautifulSoup(followee_list[j])
                             user_link = followee_soup.find("h2", class_="zm-list-content-title").a
-                            yield User(user_link["href"], user_link.string.encode("utf-8"))
+                            yield UserDetail(user_link["href"], user_link.string.encode("utf-8"))
 
 
     def get_followers(self):
@@ -482,7 +482,7 @@ class User:
                     if i == 0:
                         user_url_list = soup.find_all("h2", class_="zm-list-content-title")
                         for j in range(min(followers_num, 20)):
-                            yield User(user_url_list[j].a["href"], user_url_list[j].a.string.encode("utf-8"))
+                            yield UserDetail(user_url_list[j].a["href"], user_url_list[j].a.string.encode("utf-8"))
                     else:
                         post_url = "http://www.zhihu.com/node/ProfileFollowersListV2"
                         _xsrf = soup.find("input", attrs={'name': '_xsrf'})["value"]
@@ -505,7 +505,7 @@ class User:
                         for j in range(min(followers_num - i * 20, 20)):
                             follower_soup = BeautifulSoup(follower_list[j])
                             user_link = follower_soup.find("h2", class_="zm-list-content-title").a
-                            yield User(user_link["href"], user_link.string.encode("utf-8"))
+                            yield UserDetail(user_link["href"], user_link.string.encode("utf-8"))
 
     def get_asks(self):
         """
@@ -633,6 +633,12 @@ class User:
             yield
 
 
+class Topic:
+    def __init__(self, name=None, id=None):
+        self.name = name
+        self.id = id
+
+
 class UserDetail(User):
     detail_soup = None
     topic_soup = None
@@ -693,11 +699,6 @@ class UserDetail(User):
         """
         return self.base_profile_num(i=3)
 
-    def get_profile_fav_logs(self):
-        """
-            个人成就--公共编辑数量
-        """
-        return self.base_profile_num(i=4)
 
     def get_carrer_exps(self):
         """
@@ -706,7 +707,7 @@ class UserDetail(User):
         if self.user_url == None:
             print ("I'm anonymous user.")
             return 0
-            yield
+            # yield
         else:
             if self.soup == None:
                 self.detail_parser()
@@ -720,10 +721,10 @@ class UserDetail(User):
                     string = carrer_box[i].string
                 if string != "·":
                     tmp.append(string)
-                    if len(tmp) == 2:
-                        yield tmp
-                        tmp = []
-
+                    # if len(tmp) == 2:
+                        # yield tmp
+                        # tmp = []
+            return tmp
     def get_citys(self):
         """
 
@@ -731,20 +732,22 @@ class UserDetail(User):
         if self.user_url == None:
             print ("I'm anonymous user.")
             return 0
-            yield
+            # yield
         else:
             if self.detail_soup == None:
                 self.detail_parser()
             detail_soup = self.detail_soup
             carrer_box = detail_soup.find_all('div', class_="zm-profile-module zg-clear")[1].find_all("strong")
+            tmp = []
             for i in range(len(carrer_box)):
                 if carrer_box[i].find('a'):
                     string = carrer_box[i].find('a').string
                 else:
                     string = carrer_box[i].string
                 if string != "·":
-                    yield string
-
+                    # yield string
+                    tmp.append(string)
+                    return tmp
     def get_eduction_exps(self):
         """
 
@@ -752,7 +755,7 @@ class UserDetail(User):
         if self.user_url == None:
             print ("I'm anonymous user.")
             return 0
-            yield
+            # yield
         else:
             if self.detail_soup == None:
                 self.detail_parser()
@@ -766,17 +769,23 @@ class UserDetail(User):
                     string = carrer_box[i].string
                 if string != "·":
                     tmp.append(string)
-                    if len(tmp) == 2:
-                        yield tmp
-                        tmp = []
-
+                    # if len(tmp) == 2:
+                    #     yield tmp
+                        # tmp = []
+            return tmp
     def get_topics_num(self):
         if self.detail_soup == None:
             self.detail_parser()
         detail_soup = self.detail_soup
-        count = detail_soup.find_all('div', class_="zm-profile-side-section-title")[1].find('a').string.split()[0]
-        return int(count)
-
+        sections = detail_soup.find_all('div', class_="zm-profile-side-section-title")
+        if len(sections):
+            if len(sections) == 2:
+                    count = sections[1].find('a').string.split()[0]
+            elif "个话题" in sections[0].find('a').string:
+                count = sections[0].find('a').string.split()[0]
+            return int(count)
+        else:
+            return 0
     def get_topics(self):
         if self.topic_soup == None:
             self.topic_parser()
@@ -788,7 +797,7 @@ class UserDetail(User):
                 user_url_list = topic_soup.find_all("div", class_="zm-profile-section-item zg-clear")
                 for j in range(min(topics_num, 20)):
                     atag = user_url_list[j].find_all('a', href=re.compile("\/topic\/\d+"))[-2]
-                    yield (atag.string, atag['href'])
+                    yield Topic(atag.string, atag['href'])
             else:
                 _xsrf = topic_soup.find("input", attrs={'name': '_xsrf'})["value"]
                 offset = i * 20
@@ -810,7 +819,8 @@ class UserDetail(User):
                 for j in range(min(topics_num - i * 20, 20)):
                     # follower_soup = BeautifulSoup(follower_list[j])
                     atag = userlink[j].find('a', href=re.compile("\/topic\/\d+"))
-                    yield (atag.string, atag['href'])
+                    yield  Topic(atag.string, atag['href'])
+
 
 
 class Answer:
@@ -920,14 +930,14 @@ class Answer:
             anon_user_id = "匿名用户".decode('utf-8').encode('gbk')
         else:
             anon_user_id = "匿名用户"
-        if self.get_author().get_user_id() == anon_user_id:
+        if self.get_author().nickname() == anon_user_id:
             if not os.path.isdir(os.path.join(os.path.join(os.getcwd(), "text"))):
                 os.makedirs(os.path.join(os.path.join(os.getcwd(), "text")))
             if platform.system() == 'Windows':
-                file_name = self.get_question().get_title() + "--" + self.get_author().get_user_id() + "的回答.txt".decode(
+                file_name = self.get_question().get_title() + "--" + self.get_author().nickname() + "的回答.txt".decode(
                     'utf-8').encode('gbk')
             else:
-                file_name = self.get_question().get_title() + "--" + self.get_author().get_user_id() + "的回答.txt"
+                file_name = self.get_question().get_title() + "--" + self.get_author().nickname() + "的回答.txt"
             print (file_name)
             # if platform.system() == 'Windows':
             # file_name = file_name.decode('utf-8').encode('gbk')
@@ -944,10 +954,10 @@ class Answer:
             if not os.path.isdir(os.path.join(os.path.join(os.getcwd(), "text"))):
                 os.makedirs(os.path.join(os.path.join(os.getcwd(), "text")))
             if platform.system() == 'Windows':
-                file_name = self.get_question().get_title() + "--" + self.get_author().get_user_id() + "的回答.txt".decode(
+                file_name = self.get_question().get_title() + "--" + self.get_author().nickname() + "的回答.txt".decode(
                     'utf-8').encode('gbk')
             else:
-                file_name = self.get_question().get_title() + "--" + self.get_author().get_user_id() + "的回答.txt"
+                file_name = self.get_question().get_title() + "--" + self.get_author().nickname() + "的回答.txt"
             print (file_name)
             # if platform.system() == 'Windows':
             # file_name = file_name.decode('utf-8').encode('gbk')
@@ -957,25 +967,25 @@ class Answer:
             f = open(os.path.join(os.path.join(os.getcwd(), "text"), file_name), "wt")
             f.write(self.get_question().get_title() + "\n\n")
         if platform.system() == 'Windows':
-            f.write("作者: ".decode('utf-8').encode('gbk') + self.get_author().get_user_id() + "  赞同: ".decode(
+            f.write("作者: ".decode('utf-8').encode('gbk') + self.get_author().nickname() + "  赞同: ".decode(
                 'utf-8').encode('gbk') + str(self.get_upvote()) + "\n\n")
             f.write(body.get_text().encode("gbk"))
             link_str = "原链接: ".decode('utf-8').encode('gbk')
             f.write("\n" + link_str + self.answer_url.decode('utf-8').encode('gbk'))
         else:
-            f.write("作者: " + self.get_author().get_user_id() + "  赞同: " + str(self.get_upvote()) + "\n\n")
+            f.write("作者: " + self.get_author().nickname() + "  赞同: " + str(self.get_upvote()) + "\n\n")
             f.write(body.get_text().encode("utf-8"))
             f.write("\n" + "原链接: " + self.answer_url)
         f.close()
 
     # def to_html(self):
     # content = self.get_content()
-    # if self.get_author().get_user_id() == "匿名用户":
-    # file_name = self.get_question().get_title() + "--" + self.get_author().get_user_id() + "的回答.html"
+    # if self.get_author().nickname() == "匿名用户":
+    # file_name = self.get_question().get_title() + "--" + self.get_author().nickname() + "的回答.html"
     # f = open(file_name, "wt")
     # print file_name
     # else:
-    # file_name = self.get_question().get_title() + "--" + self.get_author().get_user_id() + "的回答.html"
+    # file_name = self.get_question().get_title() + "--" + self.get_author().nickname() + "的回答.html"
     # f = open(file_name, "wt")
     # print file_name
     # f.write(str(content))
@@ -987,12 +997,12 @@ class Answer:
             anon_user_id = "匿名用户".decode('utf-8').encode('gbk')
         else:
             anon_user_id = "匿名用户"
-        if self.get_author().get_user_id() == anon_user_id:
+        if self.get_author().nickname() == anon_user_id:
             if platform.system() == 'Windows':
-                file_name = self.get_question().get_title() + "--" + self.get_author().get_user_id() + "的回答.md".decode(
+                file_name = self.get_question().get_title() + "--" + self.get_author().nickname() + "的回答.md".decode(
                     'utf-8').encode('gbk')
             else:
-                file_name = self.get_question().get_title() + "--" + self.get_author().get_user_id() + "的回答.md"
+                file_name = self.get_question().get_title() + "--" + self.get_author().nickname() + "的回答.md"
             print (file_name)
             # if platform.system() == 'Windows':
             # file_name = file_name.decode('utf-8').encode('gbk')
@@ -1011,12 +1021,12 @@ class Answer:
             if not os.path.isdir(os.path.join(os.path.join(os.getcwd(), "markdown"))):
                 os.makedirs(os.path.join(os.path.join(os.getcwd(), "markdown")))
             if platform.system() == 'Windows':
-                file_name = self.get_question().get_title() + "--" + self.get_author().get_user_id() + "的回答.md".decode(
+                file_name = self.get_question().get_title() + "--" + self.get_author().nickname() + "的回答.md".decode(
                     'utf-8').encode('gbk')
             else:
-                file_name = self.get_question().get_title() + "--" + self.get_author().get_user_id() + "的回答.md"
+                file_name = self.get_question().get_title() + "--" + self.get_author().nickname() + "的回答.md"
             print (file_name)
-            # file_name = self.get_question().get_title() + "--" + self.get_author().get_user_id() + "的回答.md"
+            # file_name = self.get_question().get_title() + "--" + self.get_author().nickname() + "的回答.md"
             # if platform.system() == 'Windows':
             # file_name = file_name.decode('utf-8').encode('gbk')
             # print file_name
@@ -1025,10 +1035,10 @@ class Answer:
             f = open(os.path.join(os.path.join(os.getcwd(), "markdown"), file_name), "wt")
             f.write("# " + self.get_question().get_title() + "\n")
         if platform.system() == 'Windows':
-            f.write("### 作者: ".decode('utf-8').encode('gbk') + self.get_author().get_user_id() + "  赞同: ".decode(
+            f.write("### 作者: ".decode('utf-8').encode('gbk') + self.get_author().nickname() + "  赞同: ".decode(
                 'utf-8').encode('gbk') + str(self.get_upvote()) + "\n")
         else:
-            f.write("### 作者: " + self.get_author().get_user_id() + "  赞同: " + str(self.get_upvote()) + "\n")
+            f.write("### 作者: " + self.get_author().nickname() + "  赞同: " + str(self.get_upvote()) + "\n")
         text = html2text.html2text(content.decode('utf-8')).encode("utf-8")
 
         r = re.findall(r'\*\*(.*?)\*\*', text)
@@ -1082,11 +1092,11 @@ class Answer:
             for voter_info in voters_info:
                 if voter_info.string == ( u"匿名用户、" or u"匿名用户"):
                     voter_url = None
-                    yield User(voter_url)
+                    yield UserDetail(voter_url)
                 else:
                     voter_url = "http://www.zhihu.com" + str(voter_info.a["href"])
                     voter_id = voter_info.a["title"].encode("utf-8")
-                    yield User(voter_url, voter_id)
+                    yield UserDetail(voter_url, voter_id)
 
 
 class Collection:

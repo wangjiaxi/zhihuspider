@@ -1,8 +1,8 @@
-from zhihu import User, UserDetail
-user = UserDetail("https://www.zhihu.com/people/hualong-mei/about")
+from zhihu import User, UserDetail, Question
+user = UserDetail("https://www.zhihu.com/people/lan-jiang-26")
 t = user.get_followees()
-# user.get_followees_num()
-print(user.get_user_id())
+user.get_followees_num()
+# print(user.get_user_id())
 print(user.get_data_id())
 print(user.get_gender())
 print(user.get_followees_num())
@@ -15,9 +15,10 @@ print(user.get_collections_num())
 print(user.get_profile_vote_num())
 print(user.get_profile_thank_num())
 print(user.get_profile_fav_num())
-print(user.get_profile_fav_share())
-t = user.get_carrer_exps()
-
-for i in t:
-    print(i)
+print(user.get_topics_num())
+print(user.get_carrer_exps())
+t = user.get_topics()
+question = Question(url='https://www.zhihu.com/question/32046716')
+print(question.get_detail())
+print(question.get_title ())
 
