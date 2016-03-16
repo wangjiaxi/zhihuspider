@@ -1,20 +1,33 @@
+from __future__ import absolute_import
 import gevent
 import redis
 import threading
 import socketserver
+import json
+import logging
+import socket
+
+from http.server import BaseHTTPRequestHandler
 
 from gevent.queue import Queue
-
 from spider.zhihu import *
 from trans.socketserver import ThreadedTCPServer
+from db.zhuhu_db import ZhibuDb
+
 tasks = Queue
+mongo_zh = ZhibuDb('zhihu')
+
 BASE_URL = 'https://www.zhihu.com/people/hugo/'
 base_user = UserDetail('https://www.zhihu.com/people/hugo/')
 
+user_has_saved = set()
+user_as_parent = set(['xiao-xian-90-93', 'matg'])
+user_as_parent_used = set()
+
 class Master:
-    def __init__(self):
-        self.host = 'localhost'
-        self.port = 8888
+    def __init__(self, host='localhost', port=8888):
+        self.host = host
+        self.port = port
         self.request_handler = None
         self.server = None
 
@@ -22,6 +35,7 @@ class Master:
         self.server = ThreadedTCPServer((self.host, self.port), self.request_handler)
         server_thread = threading.Thread(target=self.server.serve_forever)
         # Exit the server thread when the main thread terminates
+        # print(dir(server_thread))
         server_thread.daemon = True
         server_thread.start()
 
@@ -39,20 +53,47 @@ class Master:
 class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
 
     def handle(self):
-        data = self.accept()
-        print(dir(self.cur_thread()))
-        response = "%s reviced %s :" % (self.cur_thread().getName(), data)
-        response = response.encode()
-        self.send(response)
+        while True:
+            accept = self.accept()
+            if accept:
+                try:
+                    data = json.loads(accept)
+                except Exception as e:
+                    logging.error(e)
+                    return
+                if data['status'] == 0:
+                    user = user_as_parent.pop()
+                    user_as_parent_used.add(user)
+                    logging.debug("send user %s to slave" % user)
+                    self.send(user.encode())
+                elif data['status'] == 1:
+                    logging.warning("check repeat user : %s" % data['username'])
+                    if data['username'] in user_has_saved:
+                        self.send("1".encode())
+                    self.send("0".encode())
+                elif data['status'] == 2:
+                    # mongo_zh.insert_user(data)
+                    logging.warning("saved user: %s" % data['detail']['nickname'])
+                    logging.warning(user_has_saved)
+                    logging.warning(user_as_parent)
+                    logging.warning(user_as_parent_used)
+                    user = data['detail']['username']
+                    user_has_saved.add(user)
+                    if user not in user_as_parent_used:
+                        user_as_parent.add(data['detail']['username'])
+            else:
+                break
 
     def send(self, response):
         return self.request.sendall(response)
 
     def accept(self):
-        return str(self.request.recv(1024), 'ascii')
+        return self.request.recv(1024).decode('utf-8')
 
     def cur_thread(self):
         return threading.current_thread()
+
+
 
 # master = Master()
 # for user in base_user.get_followees():
@@ -64,5 +105,11 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
 #         task.put(recived)
 #         master.send(sender, task.put())
 #
+import time
+
 if __name__ == '__main__':
-    pass
+    host = None
+    port = None
+    master = Master()
+    master.request_handler = ThreadedTCPRequestHandler
+    master.build()
