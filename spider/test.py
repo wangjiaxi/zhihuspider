@@ -16,10 +16,12 @@ print(user.get_profile_vote_num())
 print(user.get_profile_thank_num())
 print(user.get_profile_fav_num())
 print(user.get_followers())
-for user in user.get_followers():
-    print(user)
+# for user in user.get_followers():
+#     print(user)
 t = user.get_topics()
+for tt in t:
+    print(tt.name)
+    print(tt.id)
 question = Question(url='https://www.zhihu.com/question/32046716')
 print(question.get_detail())
-print(question.get_title ())
-
+print(question.get_topics())

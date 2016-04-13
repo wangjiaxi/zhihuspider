@@ -7,15 +7,5 @@ class Mongo(object):
             client = MongoClient(host, port)
         except errors.ConnectionFailure as e:
             warning(e)
-        self.db = client['db_name']
-        self.collection = None
-
-    def insert_one(self, data):
-        return self.collection.insert_one(data)
-
-    def insert_many(self, data):
-        return self.collection.insert_many(data)
-
-    def find_one(self, data):
-        return self.collection.find_one(data)
+        self.db = client[db_name]
 

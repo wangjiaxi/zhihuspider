@@ -83,7 +83,11 @@ class Question:
         if self.soup == None:
             self.parser()
         soup = self.soup
-        followers_num = int(soup.find("div", class_="zg-gray-normal").a.strong.string)
+        try:
+            followers_num = int(soup.find("div", class_="zg-gray-normal").a.strong.string)
+        except:
+            followers_num = 0
+
         return followers_num
 
     def get_topics(self):
@@ -248,8 +252,11 @@ class Question:
         if self.soup == None:
             self.parser()
         soup = self.soup
-        return int(soup.find("meta", itemprop="visitsCount")["content"])
-
+        try:
+            times = int(soup.find("meta", itemprop="visitsCount")["content"])
+        except Exception:
+            times = 0
+        return times
 
 class User:
     user_url = None
@@ -665,16 +672,18 @@ class UserDetail(User):
             个人成就--获得赞同数量
         """
         if self.user_url == None:
-            print ("I'm anonymous user.")
+            print("I'm anonymous user.")
             return 0
         else:
-            if self.detail_soup == None:
-                self.detail_parser()
-            detail_soup = self.detail_soup
-            num = int(detail_soup.find("div", class_="zm-profile-module zm-profile-details-reputation") \
-                                .find_all("strong")[i].string)
-            return num
-
+            try:
+                if self.detail_soup == None:
+                    self.detail_parser()
+                detail_soup = self.detail_soup
+                num = int(detail_soup.find("div", class_="zm-profile-module zm-profile-details-reputation") \
+                                    .find_all("strong")[i].string)
+                return num
+            except:
+                return 0
     def get_profile_vote_num(self):
         """
             个人成就--获得赞同数量
@@ -712,7 +721,10 @@ class UserDetail(User):
             if self.soup == None:
                 self.detail_parser()
             detail_soup = self.detail_soup
-            carrer_box = detail_soup.find_all('div', class_="zm-profile-module zg-clear")[0].find_all("strong")
+            try:
+                carrer_box = detail_soup.find_all('div', class_="zm-profile-module zg-clear")[0].find_all(class_="ProfileItem-text ProfileItem-text--bold")
+            except Exception:
+                return []
             tmp = []
             for i in range(len(carrer_box)):
                 if carrer_box[i].find('a'):
@@ -737,7 +749,10 @@ class UserDetail(User):
             if self.detail_soup == None:
                 self.detail_parser()
             detail_soup = self.detail_soup
-            carrer_box = detail_soup.find_all('div', class_="zm-profile-module zg-clear")[1].find_all("strong")
+            try:
+                carrer_box = detail_soup.find_all('div', class_="zm-profile-module zg-clear")[1].find_all(class_="ProfileItem-text ProfileItem-text--bold")
+            except Exception:
+                return []
             tmp = []
             for i in range(len(carrer_box)):
                 if carrer_box[i].find('a'):
@@ -747,7 +762,7 @@ class UserDetail(User):
                 if string != "·":
                     # yield string
                     tmp.append(string)
-                    return tmp
+            return tmp
     def get_eduction_exps(self):
         """
 
@@ -760,7 +775,10 @@ class UserDetail(User):
             if self.detail_soup == None:
                 self.detail_parser()
             detail_soup = self.detail_soup
-            carrer_box = detail_soup.find_all('div', class_="zm-profile-module zg-clear")[2].find_all("strong")
+            try:
+                carrer_box = detail_soup.find_all('div', class_="zm-profile-module zg-clear")[2].find_all(class_="ProfileItem-text ProfileItem-text--bold")
+            except Exception:
+                return []
             tmp = []
             for i in range(len(carrer_box)):
                 if carrer_box[i].find('a'):
@@ -819,7 +837,7 @@ class UserDetail(User):
                 for j in range(min(topics_num - i * 20, 20)):
                     # follower_soup = BeautifulSoup(follower_list[j])
                     atag = userlink[j].find('a', href=re.compile("\/topic\/\d+"))
-                    yield  Topic(atag.string, atag['href'])
+                    yield Topic(atag.string, atag['href'])
 
 
 

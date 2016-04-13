@@ -13,15 +13,18 @@ from gevent.queue import Queue
 from spider.zhihu import *
 from trans.socketserver import ThreadedTCPServer
 from db.zhuhu_db import ZhibuDb
-
+from db.base import Mongo
 tasks = Queue
 mongo_zh = ZhibuDb('zhihu')
+
+conn = Mongo(db_name='zhihu')
+user_db = conn.db['user']
 
 BASE_URL = 'https://www.zhihu.com/people/hugo/'
 base_user = UserDetail('https://www.zhihu.com/people/hugo/')
 
 user_has_saved = set()
-user_as_parent = set(['xiao-xian-90-93', 'matg'])
+user_as_parent = set(['bugissomewhere', 'Blue7', 'yan-xiao-chuan-77', 'yinshoufu', 'melodyrosy', 'zhuang-dian-89', 'ganyu-25', 'kqx1987', 'liu-xin-77-43-38', '-yu-25'])
 user_as_parent_used = set()
 
 class Master:
@@ -38,6 +41,7 @@ class Master:
         # print(dir(server_thread))
         server_thread.daemon = True
         server_thread.start()
+        self.server.serve_forever()
 
     def server_address(self):
         if not self.server:
@@ -59,21 +63,27 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
                 try:
                     data = json.loads(accept)
                 except Exception as e:
+                    print(data)
                     logging.error(e)
-                    return
+
                 if data['status'] == 0:
                     user = user_as_parent.pop()
                     user_as_parent_used.add(user)
-                    logging.debug("send user %s to slave" % user)
+                    logging.warning("send user %s to slave" % user)
                     self.send(user.encode())
                 elif data['status'] == 1:
                     logging.warning("check repeat user : %s" % data['username'])
                     if data['username'] in user_has_saved:
                         self.send("1".encode())
-                    self.send("0".encode())
+                    else:
+                        self.send("0".encode())
                 elif data['status'] == 2:
                     # mongo_zh.insert_user(data)
+                    logging.warning("*" * 40)
+                    logging.warning(self.cur_thread().name)
+                    logging.warning("*" * 40)
                     logging.warning("saved user: %s" % data['detail']['nickname'])
+                    user_db.insert_one(data['detail'])
                     logging.warning(user_has_saved)
                     logging.warning(user_as_parent)
                     logging.warning(user_as_parent_used)
@@ -113,3 +123,4 @@ if __name__ == '__main__':
     master = Master()
     master.request_handler = ThreadedTCPRequestHandler
     master.build()
+
